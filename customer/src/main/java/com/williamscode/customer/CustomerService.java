@@ -2,16 +2,19 @@ package com.williamscode.customer;
 
 import com.williamscode.clients.fraud.FraudClient;
 import com.williamscode.clients.fraud.FraudCheckResponse;
+import com.williamscode.clients.notification.NotificationClient;
+import com.williamscode.clients.notification.NotificationRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestTemplate;
+
 
 @Service
 @RequiredArgsConstructor
 public class CustomerService {
     private final CustomerRepository customerRepository;
-    private final RestTemplate restTemplate;
+//    private final RestTemplate restTemplate;
     private final FraudClient fraudClient;
+    private final NotificationClient notificationClient;
 
     public void registerCustomer(CustomerRegistrationRequest request) {
         Customer customer = Customer.builder()
@@ -28,11 +31,18 @@ public class CustomerService {
                 FraudCheckResponse.class,
                 customer.getId()
         );*/
-        FraudCheckResponse fraudCheckResponse = fraudClient.createFraudCheckHistoty(customer.getId());
+        FraudCheckResponse fraudCheckResponse = fraudClient.createFraudCheckHistory(customer.getId());
         if (fraudCheckResponse == null || fraudCheckResponse.isFraudster()){
             throw new IllegalStateException("fraudster customer");
         }
-
+        //TODO make it async
+        NotificationRequest notificationRequest =
+                new NotificationRequest(
+                        customer.getId(),
+                        customer.getEmail(),
+                        String.format("Hi %s, welcome to Williamscode...", customer.getFirstName())
+                );
+        notificationClient.sendNotification(notificationRequest);
 
     }
 }
